@@ -2,7 +2,7 @@
 
 namespace remani_planner
 {
-  REMANIReplanFSM::~REMANIReplanFSM(){}
+  REMANIReplanFSM::~REMANIReplanFSM() {}
   void REMANIReplanFSM::init(ros::NodeHandle &nh)
   {
     exec_state_ = FSM_EXEC_STATE::INIT;
@@ -25,12 +25,12 @@ namespace remani_planner
     nh.param("fsm/replan_trajectory_time", replan_trajectory_time_, 0.0);
     nh.param("fsm/time_for_gripper", time_for_gripper_, -1.0);
     nh.param("fsm/global_plan", global_plan_, false);
-    if(global_plan_) planning_horizen_ = 1.0e3;
+    if (global_plan_)
+      planning_horizen_ = 1.0e3;
 
     nh.param("mm/mobile_base_dof", mobile_base_dim_, -1);
     nh.param("mm/manipulator_dof", manipulator_dim_, -1);
     nh.param("mm/mobile_base_non_singul_vel", mobile_base_non_singul_vel_, -1.0);
-    
 
     traj_dim_ = mobile_base_dim_ + manipulator_dim_;
 
@@ -52,7 +52,8 @@ namespace remani_planner
     Eigen::VectorXd wp = Eigen::VectorXd::Zero(traj_dim_);
     double yaw_temp;
     bool gripper_close;
-    for (int i = 0; i < waypoint_num_; i++){
+    for (int i = 0; i < waypoint_num_; i++)
+    {
       nh.param("fsm/waypoint" + to_string(i) + "_yaw", yaw_temp, -1.0);
       waypoints_yaw_.push_back(yaw_temp * M_PI / 180.0);
 
@@ -61,13 +62,15 @@ namespace remani_planner
 
       std::vector<double> waypoints_temp;
       nh.getParam("fsm/waypoint" + to_string(i), waypoints_temp);
-      for(unsigned int j = 0; j < waypoints_temp.size(); j++){
+      for (unsigned int j = 0; j < waypoints_temp.size(); j++)
+      {
         wp(j) = waypoints_temp[j];
-        if((int)j >= mobile_base_dim_) wp(j) = wp(j) * M_PI / 180.0;
+        if ((int)j >= mobile_base_dim_)
+          wp(j) = wp(j) * M_PI / 180.0;
       }
       waypoints_.push_back(wp);
     }
-    
+
     init_time_list_.clear();
     opt_time_list_.clear();
     total_time_list_.clear();
@@ -97,7 +100,6 @@ namespace remani_planner
     start_pub_ = nh.advertise<std_msgs::Bool>("planning/start", 1);
     reached_pub_ = nh.advertise<std_msgs::Bool>("planning/finish", 1);
     waypoint_sub_ = nh.subscribe("/move_base_simple/goal", 1, &REMANIReplanFSM::waypointCallback, this);
-    
   }
 
   void REMANIReplanFSM::execFSMCallback(const ros::TimerEvent &e)
@@ -106,15 +108,18 @@ namespace remani_planner
 
     static int fsm_num = 0;
     fsm_num++;
-    if (fsm_num == 100){
+    if (fsm_num == 100)
+    {
       fsm_num = 0;
       // printFSMExecState();
     }
 
-    switch (exec_state_){
+    switch (exec_state_)
+    {
     case INIT:
     {
-      if (!have_odom_){
+      if (!have_odom_)
+      {
         goto force_return; // return;
       }
       changeFSMExecState(WAIT_TARGET, "FSM");
@@ -125,7 +130,8 @@ namespace remani_planner
     {
       if (!have_target_)
         goto force_return; // return;
-      else{
+      else
+      {
         changeFSMExecState(GEN_NEW_TRAJ, "FSM");
       }
       break;
@@ -133,7 +139,8 @@ namespace remani_planner
 
     case GEN_NEW_TRAJ:
     {
-      if(try_plan_after_emergency_){
+      if (try_plan_after_emergency_)
+      {
         std::cout << "emergency stop mm pos: " << mm_state_pos_.transpose() << std::endl;
         std::cout << "emergency stop mm vel: " << mm_state_vel_.transpose() << std::endl;
         std::cout << "emergency stop mm acc: " << mm_state_acc_.transpose() << std::endl;
@@ -143,7 +150,8 @@ namespace remani_planner
       have_local_traj_ = false;
       bool success = planFromGlobalTraj(10);
       // std::cout << "gen new traj 2\n";
-      if (success){
+      if (success)
+      {
         changeFSMExecState(EXEC_TRAJ, "FSM");
         flag_escape_emergency_ = true;
         try_plan_after_emergency_ = false;
@@ -160,27 +168,32 @@ namespace remani_planner
 
     case REPLAN_TRAJ:
     {
-      
-      if(planFromLocalTraj(flag_relan_astar_)){
+
+      if (planFromLocalTraj(flag_relan_astar_))
+      {
         replan_fail_time_ = 0;
         flag_relan_astar_ = false;
-        if((ros::Time::now() - t_last_Astar_ ).toSec() > 1.0){
+        if ((ros::Time::now() - t_last_Astar_).toSec() > 1.0)
+        {
           std::cout << "cal front end next time" << std::endl;
           flag_relan_astar_ = true;
           t_last_Astar_ = ros::Time::now();
         }
         changeFSMExecState(EXEC_TRAJ, "FSM");
       }
-      else{
+      else
+      {
         replan_fail_time_++;
         flag_relan_astar_ = true;
         t_last_Astar_ = ros::Time::now();
-        if(replan_fail_time_ >= 20){
+        if (replan_fail_time_ >= 20)
+        {
           replan_fail_time_ = 0;
           ROS_ERROR("[FSM]:REPLAN fail over 20 times!!!");
           changeFSMExecState(WAIT_TARGET, "FSM");
         }
-        else{
+        else
+        {
           changeFSMExecState(REPLAN_TRAJ, "FSM");
         }
       }
@@ -201,12 +214,16 @@ namespace remani_planner
       bool touch_the_goal = ((local_target_pt_ - end_pt_).norm() < 1e-2);
       bool close_to_no_replan_thresh = ((end_pt_ - pos).head(2).norm() < no_replan_thresh_);
 
-      if((target_type_ == TARGET_TYPE::PRESET_TARGET) && close_to_no_replan_thresh){
-        if((wpt_id_ < waypoint_num_ - 1) && need_to_plan_next){
+      if ((target_type_ == TARGET_TYPE::PRESET_TARGET) && close_to_no_replan_thresh)
+      {
+        if ((wpt_id_ < waypoint_num_ - 1) && need_to_plan_next)
+        {
           ++wpt_id_;
           planNextWaypoint(waypoints_[wpt_id_], waypoints_yaw_[wpt_id_]);
           gripper_flag_ = true;
-        }else if(need_to_gripper && gripper_flag_){
+        }
+        else if (need_to_gripper && gripper_flag_)
+        {
           ++map_state_;
           std_msgs::Bool gripper_cmd;
           gripper_cmd.data = waypoint_gripper_close_[wpt_id_]; // true: close gripper; false: open
@@ -223,10 +240,12 @@ namespace remani_planner
 
           gripper_flag_ = false;
         }
-        
-      }else if(t_cur > info->duration - 1e-2 && touch_the_goal){
-        
-        if(target_type_ != TARGET_TYPE::PRESET_TARGET && wpt_id_ >= waypoint_num_ - 1){
+      }
+      else if (t_cur > info->duration - 1e-2 && touch_the_goal)
+      {
+
+        if (target_type_ != TARGET_TYPE::PRESET_TARGET && wpt_id_ >= waypoint_num_ - 1)
+        {
           have_target_ = false;
           have_trigger_ = false;
           /* The navigation task completed */
@@ -238,8 +257,9 @@ namespace remani_planner
           reached_pub_.publish(msg);
           goto force_return;
         }
-        
-      }else if(!close_to_no_replan_thresh && t_cur > replan_thresh_ && (!global_plan_)){
+      }
+      else if (!close_to_no_replan_thresh && t_cur > replan_thresh_ && (!global_plan_))
+      {
         changeFSMExecState(REPLAN_TRAJ, "FSM");
       }
 
@@ -248,11 +268,14 @@ namespace remani_planner
 
     case EMERGENCY_STOP:
     {
-      if(flag_escape_emergency_){ // Avoiding repeated calls
+      if (flag_escape_emergency_)
+      { // Avoiding repeated calls
         callEmergencyStop(mm_state_pos_, mm_car_yaw_, mm_car_singul_);
       }
-      else{
-        if(enable_fail_safe_ && mm_state_vel_.head(2).norm() < 0.1){
+      else
+      {
+        if (enable_fail_safe_ && mm_state_vel_.head(2).norm() < 0.1)
+        {
           try_plan_after_emergency_ = true;
           have_local_traj_ = false;
           changeFSMExecState(GEN_NEW_TRAJ, "FSM");
@@ -272,14 +295,16 @@ namespace remani_planner
     exec_timer_.start();
   }
 
-  void REMANIReplanFSM::checkCollisionCallback(const ros::TimerEvent &e){
+  void REMANIReplanFSM::checkCollisionCallback(const ros::TimerEvent &e)
+  {
     SingulTrajData *info = &planner_manager_->traj_container_.singul_traj_data;
     auto map = planner_manager_->grid_map_;
 
     if (exec_state_ == WAIT_TARGET || info->traj_id <= 0)
       return;
     /* ---------- check lost of depth ---------- */
-    if (map->getOdomDepthTimeout()){
+    if (map->getOdomDepthTimeout())
+    {
       ROS_ERROR("Depth Lost! EMERGENCY_STOP");
       enable_fail_safe_ = false;
       changeFSMExecState(EMERGENCY_STOP, "SAFETY");
@@ -295,48 +320,64 @@ namespace remani_planner
     bool occ = false;
     // std::cout << "check 4" << std::endl;
     int coll_type;
-    for (double t = t_cur; t < info->duration; t += time_step){
+    for (double t = t_cur; t < info->duration; t += time_step)
+    {
       // If t_cur < t_1_2, only the first 2/3 partition of the trajectory is considered valid and will get checked.
       if (t_cur < t_1_2 && t >= t_2_3)
         break;
-        
-      if (planner_manager_->ploy_traj_opt_->checkCollision(*info, t, coll_type)){
-        if(coll_type == 0){
+
+      if (planner_manager_->ploy_traj_opt_->checkCollision(*info, t, coll_type))
+      {
+        if (coll_type == 0)
+        {
           ROS_WARN("car collision at relative time %f!", t / info->duration);
-        }else if (coll_type == 1){
+        }
+        else if (coll_type == 1)
+        {
           ROS_WARN("mani collision at relative time %f!", t / info->duration);
-        }else if (coll_type == 2){
+        }
+        else if (coll_type == 2)
+        {
           ROS_WARN("car-mani collision at relative time %f!", t / info->duration);
-        }else if (coll_type == 3){
+        }
+        else if (coll_type == 3)
+        {
           ROS_WARN("mani-mani collision at relative time %f!", t / info->duration);
         }
-        
+
         t_temp = t;
         occ = true;
         break;
       }
     }
 
-    if (occ){
+    if (occ)
+    {
       /* Handle the collided case immediately */
       ROS_INFO("Try to replan a safe trajectory");
-      if (planFromLocalTraj(false)){ // Make a chance
+      if (planFromLocalTraj(false))
+      { // Make a chance
         ROS_INFO("Plan success when detect collision.");
         changeFSMExecState(EXEC_TRAJ, "SAFETY");
         return;
-      }else{
+      }
+      else
+      {
         // if(planFromLocalTraj(true))
         // {
         //   ROS_INFO("Plan success when detect collision.");
         //   changeFSMExecState(EXEC_TRAJ, "SAFETY");
         //   return;
         // }
-        if (t_temp - t_cur < emergency_time_){ // 1.0s of emergency time
+        if (t_temp - t_cur < emergency_time_)
+        { // 1.0s of emergency time
           ROS_WARN("Emergency stop! time=%f", t_temp - t_cur);
           changeFSMExecState(EMERGENCY_STOP, "SAFETY");
-        }else{
+        }
+        else
+        {
           ROS_WARN("current traj in collision, replan.");
-          if(planFromLocalTraj(true))
+          if (planFromLocalTraj(true))
           {
             ROS_INFO("Plan success when detect collision.");
             changeFSMExecState(EXEC_TRAJ, "SAFETY");
@@ -370,7 +411,8 @@ namespace remani_planner
       constexpr double step_size_t = 0.1;
       int i_end = floor(planner_manager_->traj_container_.global_traj.duration / step_size_t);
       vector<Eigen::Vector2d> global_traj(i_end);
-      for (int i = 0; i < i_end; i++){
+      for (int i = 0; i < i_end; i++)
+      {
         global_traj[i] = planner_manager_->traj_container_.global_traj.traj.getPos(i * step_size_t).head(mobile_base_dim_);
       }
 
@@ -401,9 +443,11 @@ namespace remani_planner
   }
 
   // manual waypoint
-  void REMANIReplanFSM::waypointCallback(const geometry_msgs::PoseStamped::ConstPtr &msg){
-    
-    if (target_type_ == TARGET_TYPE::PRESET_TARGET){
+  void REMANIReplanFSM::waypointCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
+  {
+
+    if (target_type_ == TARGET_TYPE::PRESET_TARGET)
+    {
       have_trigger_ = true;
       cout << "Triggered! traget type: " << target_type_ << endl;
 
@@ -417,22 +461,25 @@ namespace remani_planner
       return;
     }
 
-    if(msg->pose.position.z < -0.1)
+    if (msg->pose.position.z < -0.1)
       return;
     cout << "Triggered! traget type: " << target_type_ << endl;
     // trigger_ = true;
     init_state_ = mm_state_pos_;
     end_pt_ = Eigen::VectorXd::Zero(traj_dim_);
-    
-    if(target_type_ == TARGET_TYPE::MANUAL_TARGET){
+
+    if (target_type_ == TARGET_TYPE::MANUAL_TARGET)
+    {
       end_pt_(0) = msg->pose.position.x;
       end_pt_(1) = msg->pose.position.y;
       end_yaw_ = tf::getYaw(msg->pose.orientation);
-    }else{
+    }
+    else
+    {
       ROS_ERROR("wrong target type: %d", target_type_);
       return;
     }
-    
+
     planNextWaypoint(end_pt_, end_yaw_);
   }
 
@@ -450,11 +497,14 @@ namespace remani_planner
 
     mm_state_vel_(0) = msg->twist.twist.linear.x;
     mm_state_vel_(1) = msg->twist.twist.linear.y;
-    if(mm_state_vel_.head(2).norm() < mobile_base_non_singul_vel_){
+    if (mm_state_vel_.head(2).norm() < mobile_base_non_singul_vel_)
+    {
       mm_state_vel_(0) = mobile_base_non_singul_vel_ * cos(mm_car_yaw_);
       mm_state_vel_(1) = mobile_base_non_singul_vel_ * sin(mm_car_yaw_);
       mm_car_singul_ = 0;
-    }else{
+    }
+    else
+    {
       Eigen::Vector2d car_head(cos(mm_car_yaw_), sin(mm_car_yaw_));
       mm_car_singul_ = 1 ? car_head.dot(mm_state_vel_.head(2)) >= 0 : -1;
     }
@@ -464,23 +514,28 @@ namespace remani_planner
     have_odom_ = true;
   }
 
-  void REMANIReplanFSM::mmManiOdomCallback(const sensor_msgs::JointStateConstPtr &msg){
-    for(int i = 0; i < manipulator_dim_; ++i){
+  void REMANIReplanFSM::mmManiOdomCallback(const sensor_msgs::JointStateConstPtr &msg)
+  {
+    for (int i = 0; i < manipulator_dim_; ++i)
+    {
       mm_state_pos_(mobile_base_dim_ + i) = msg->position[i];
       mm_state_vel_(mobile_base_dim_ + i) = msg->velocity[i];
       mm_state_acc_(mobile_base_dim_ + i) = msg->effort[i];
     }
   }
 
-  void REMANIReplanFSM::gripperCallback(const std_msgs::Bool::ConstPtr &msg){
-    if(gripper_state_ != msg->data || (!rcv_gripper_state_)){
+  void REMANIReplanFSM::gripperCallback(const std_msgs::Bool::ConstPtr &msg)
+  {
+    if (gripper_state_ != msg->data || (!rcv_gripper_state_))
+    {
       rcv_gripper_state_ = true;
       gripper_state_ = msg->data;
       planner_manager_->mm_config_->setGripperPoint(gripper_state_);
     }
   }
 
-  void REMANIReplanFSM::changeFSMExecState(FSM_EXEC_STATE new_state, string pos_call){
+  void REMANIReplanFSM::changeFSMExecState(FSM_EXEC_STATE new_state, string pos_call)
+  {
     if (new_state == exec_state_)
       continously_called_times_++;
     else
@@ -492,7 +547,8 @@ namespace remani_planner
     cout << "[" + pos_call + "]: from " + state_str[pre_s] + " to " + state_str[int(new_state)] << endl;
   }
 
-  void REMANIReplanFSM::printFSMExecState(){
+  void REMANIReplanFSM::printFSMExecState()
+  {
     static string state_str[8] = {"INIT", "WAIT_TARGET", "GEN_NEW_TRAJ", "REPLAN_TRAJ", "EXEC_TRAJ", "EMERGENCY_STOP"};
     static int last_printed_state = -1, dot_nums = 0;
 
@@ -533,10 +589,12 @@ namespace remani_planner
     return std::pair<int, FSM_EXEC_STATE>(continously_called_times_, exec_state_);
   }
 
-  void REMANIReplanFSM::sendPolyTrajROSMsg(){
+  void REMANIReplanFSM::sendPolyTrajROSMsg()
+  {
     auto data = &planner_manager_->traj_container_.singul_traj_data;
-    
-    for(unsigned int i = 0; i < data->singul_traj.size(); ++i){
+
+    for (unsigned int i = 0; i < data->singul_traj.size(); ++i)
+    {
       quadrotor_msgs::PolynomialTraj msg;
       msg.trajectory_id = data->singul_traj[i].traj_id;
       msg.header.stamp = ros::Time(data->start_time);
@@ -550,15 +608,15 @@ namespace remani_planner
         piece.num_order = data->singul_traj[i].traj.getPiece(j).getDegree();
         piece.duration = data->singul_traj[i].traj.getPiece(j).getDuration();
         auto cMat = data->singul_traj[i].traj.getPiece(j).getCoeffMat();
-        piece.data.assign(cMat.data(),cMat.data() + cMat.rows()*cMat.cols());
+        piece.data.assign(cMat.data(), cMat.data() + cMat.rows() * cMat.cols());
         msg.trajectory.emplace_back(piece);
       }
       poly_traj_pub_.publish(msg);
     }
-
   }
 
-  bool REMANIReplanFSM::planFromGlobalTraj(const int trial_times /*= 1*/){
+  bool REMANIReplanFSM::planFromGlobalTraj(const int trial_times /*= 1*/)
+  {
     start_pos_ = mm_state_pos_;
     start_vel_ = mm_state_vel_;
     start_acc_.setZero();
@@ -566,32 +624,41 @@ namespace remani_planner
     start_yaw_ = mm_car_yaw_;
     start_singul_ = mm_car_singul_;
     bool flag_random_poly_init;
-    if(timesOfConsecutiveStateCalls().first == 1) flag_random_poly_init = false;
-    else flag_random_poly_init = true;
-    for(int i = 0; i < trial_times; i++){
-      if(callReboundReplan(true, flag_random_poly_init)){
+    if (timesOfConsecutiveStateCalls().first == 1)
+      flag_random_poly_init = false;
+    else
+      flag_random_poly_init = true;
+    for (int i = 0; i < trial_times; i++)
+    {
+      if (callReboundReplan(true, flag_random_poly_init))
+      {
         return true;
       }
     }
     return false;
   }
 
-  bool REMANIReplanFSM::planFromLocalTraj(bool flag_use_poly_init){
+  bool REMANIReplanFSM::planFromLocalTraj(bool flag_use_poly_init)
+  {
     SingulTrajData *info = &planner_manager_->traj_container_.singul_traj_data;
     double t_cur = ros::Time::now().toSec() - info->start_time + replan_trajectory_time_;
     t_cur = min(info->duration, t_cur);
 
-    start_pos_     = info->getPos(t_cur);
-    start_vel_    = info->getVel(t_cur);
-    start_acc_    = info->getAcc(t_cur);
-    start_jer_   = info->getJer(t_cur);
+    start_pos_ = info->getPos(t_cur);
+    start_vel_ = info->getVel(t_cur);
+    start_acc_ = info->getAcc(t_cur);
+    start_jer_ = info->getJer(t_cur);
     start_singul_ = info->getSingul(t_cur);
-    if(start_vel_.norm() >= mobile_base_non_singul_vel_) start_yaw_ = atan2(start_singul_ * start_vel_(1), start_singul_ * start_vel_(0));
-    else start_yaw_ = mm_car_yaw_;
+    if (start_vel_.norm() >= mobile_base_non_singul_vel_)
+      start_yaw_ = atan2(start_singul_ * start_vel_(1), start_singul_ * start_vel_(0));
+    else
+      start_yaw_ = mm_car_yaw_;
 
     bool success = callReboundReplan(flag_use_poly_init, false);
-    if (!success){
-      for (int i = 0; i < 1; i++){
+    if (!success)
+    {
+      for (int i = 0; i < 1; i++)
+      {
         success = callReboundReplan(true, true);
         if (success)
           break;
@@ -605,15 +672,19 @@ namespace remani_planner
     return true;
   }
 
-  bool REMANIReplanFSM::callReboundReplan(bool flag_use_poly_init, bool flag_randomPolyTraj){
+  bool REMANIReplanFSM::callReboundReplan(bool flag_use_poly_init, bool flag_randomPolyTraj)
+  {
     bool reach_horizon;
     planner_manager_->getLocalTarget(
         planning_horizen_, start_pos_, start_yaw_, end_pt_, end_yaw_,
         local_target_pt_, local_target_vel_, local_target_acc_, reach_horizon);
     bool local_target_gripper;
-    if(reach_horizon){
+    if (reach_horizon)
+    {
       local_target_gripper = gripper_state_;
-    }else{
+    }
+    else
+    {
       local_target_gripper = waypoint_gripper_close_[wpt_id_];
     }
     local_target_acc_.setZero();
@@ -625,16 +696,17 @@ namespace remani_planner
     int desired_start_singul;
     double desired_start_yaw;
     double desired_start_time, start_time_dura;
-    
-    if(have_local_traj_)
+
+    if (have_local_traj_)
     {
       desired_start_time = ros::Time::now().toSec() + replan_trajectory_time_;
       start_time_dura = desired_start_time - planner_manager_->traj_container_.singul_traj_data.start_time;
       start_time_dura = min(start_time_dura, planner_manager_->traj_container_.singul_traj_data.duration);
-      
+
       desired_start_pt = planner_manager_->traj_container_.singul_traj_data.getPos(start_time_dura);
       desired_start_vel = planner_manager_->traj_container_.singul_traj_data.getVel(start_time_dura);
-      if(desired_start_vel.head(2).norm() < mobile_base_non_singul_vel_){
+      if (desired_start_vel.head(2).norm() < mobile_base_non_singul_vel_)
+      {
         desired_start_vel(0) = start_singul_ * mobile_base_non_singul_vel_ * cos(start_yaw_);
         desired_start_vel(1) = start_singul_ * mobile_base_non_singul_vel_ * sin(start_yaw_);
       }
@@ -642,11 +714,14 @@ namespace remani_planner
       desired_start_acc = planner_manager_->traj_container_.singul_traj_data.getAcc(start_time_dura);
       desired_start_jerk = planner_manager_->traj_container_.singul_traj_data.getJer(start_time_dura);
       desired_start_yaw = atan2(desired_start_singul * desired_start_vel(1), desired_start_singul * desired_start_vel(0));
-    }else{
+    }
+    else
+    {
       desired_start_time = ros::Time::now().toSec();
       desired_start_pt = start_pos_;
       desired_start_vel = start_vel_;
-      if(desired_start_vel.head(2).norm() < mobile_base_non_singul_vel_){
+      if (desired_start_vel.head(2).norm() < mobile_base_non_singul_vel_)
+      {
         desired_start_vel(0) = start_singul_ * mobile_base_non_singul_vel_ * cos(start_yaw_);
         desired_start_vel(1) = start_singul_ * mobile_base_non_singul_vel_ * sin(start_yaw_);
       }
@@ -657,15 +732,16 @@ namespace remani_planner
     }
     // std::cout << "desired_start_singul: " << desired_start_singul << std::endl;
     double init_time, opt_time;
-    
+
     bool plan_success = planner_manager_->reboundReplan(
-        desired_start_pt, desired_start_vel, desired_start_acc,desired_start_jerk, desired_start_yaw, desired_start_singul, gripper_state_,
+        desired_start_pt, desired_start_vel, desired_start_acc, desired_start_jerk, desired_start_yaw, desired_start_singul, gripper_state_,
         desired_start_time, local_target_pt_, local_target_vel_, local_target_acc_, local_target_yaw, local_target_gripper,
         (have_new_target_ || flag_use_poly_init),
         flag_randomPolyTraj, have_local_traj_, init_time, opt_time);
     have_new_target_ = false;
 
-    if (plan_success){
+    if (plan_success)
+    {
       init_time_list_.push_back(init_time);
       opt_time_list_.push_back(opt_time);
       total_time_list_.push_back(init_time + opt_time);
@@ -676,7 +752,8 @@ namespace remani_planner
       int i_end = floor(planner_manager_->traj_container_.singul_traj_data.duration / 0.02);
       std::vector<Eigen::Vector2d> local_path_list;
       Eigen::Vector2d local_traj_pt;
-      for(int i = 0; i < i_end; ++i){
+      for (int i = 0; i < i_end; ++i)
+      {
         local_traj_pt = planner_manager_->traj_container_.singul_traj_data.getPos(i * 0.02).head(2);
         local_path_list.push_back(local_traj_pt);
       }
@@ -687,7 +764,8 @@ namespace remani_planner
     return plan_success;
   }
 
-  bool REMANIReplanFSM::callEmergencyStop(Eigen::VectorXd stop_pos, double stop_yaw, const int singul){
+  bool REMANIReplanFSM::callEmergencyStop(Eigen::VectorXd stop_pos, double stop_yaw, const int singul)
+  {
     std::cout << "\033[31mcall EmergencyStop\033[0m" << std::endl;
     planner_manager_->EmergencyStop(stop_pos, stop_yaw, singul);
     quadrotor_msgs::PolynomialTraj msg;

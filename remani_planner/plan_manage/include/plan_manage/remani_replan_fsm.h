@@ -62,7 +62,7 @@ namespace remani_planner
       MANUAL_TARGET = 1,
       PRESET_TARGET = 2
     };
-    
+
     /* planning utils */
     MMPlannerManager::Ptr planner_manager_;
     PlanningVisualization::Ptr visualization_;
@@ -104,8 +104,8 @@ namespace remani_planner
     Eigen::VectorXd start_pos_, start_vel_, start_acc_, start_jer_; // start state
     int start_singul_;
     double start_yaw_, end_yaw_;
-    Eigen::VectorXd end_pt_;                                       // goal state
-    Eigen::VectorXd local_target_pt_, local_target_vel_, local_target_acc_;                     // local target state
+    Eigen::VectorXd end_pt_;                                                // goal state
+    Eigen::VectorXd local_target_pt_, local_target_vel_, local_target_acc_; // local target state
     int local_target_singul_;
 
     bool flag_escape_emergency_;
@@ -132,7 +132,7 @@ namespace remani_planner
     bool callEmergencyStop(Eigen::VectorXd stop_pos, double stop_yaw, const int singul); // front-end and back-end method
     bool planFromGlobalTraj(const int trial_times = 1);
     bool planFromLocalTraj(bool flag_use_poly_init);
-    
+
     /* return value: std::pair< Times of the same state be continuously called, current continuously called state > */
     void changeFSMExecState(FSM_EXEC_STATE new_state, string pos_call);
     std::pair<int, REMANIReplanFSM::FSM_EXEC_STATE> timesOfConsecutiveStateCalls();
@@ -155,7 +155,6 @@ namespace remani_planner
     {
     }
     ~REMANIReplanFSM();
-
 
     void init(ros::NodeHandle &nh);
 

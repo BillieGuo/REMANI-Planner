@@ -21,8 +21,7 @@
 #include <random>
 #include <std_msgs/Int32.h>
 
-
-using namespace std; 
+using namespace std;
 
 pcl::KdTreeFLANN<pcl::PointXYZ> kdtreeLocalMap;
 random_device rd;
@@ -51,19 +50,21 @@ uniform_real_distribution<double> rand_box_z_;
 sensor_msgs::PointCloud2 globalMap_pcd;
 pcl::PointCloud<pcl::PointXYZ> cloudMap;
 
-void GenerateWall(double x_l, double x_h, 
-                  double y_l, double y_h, 
-                  double z_l, double z_h, 
-                  pcl::PointCloud<pcl::PointXYZ>& cloudMap){
+void GenerateWall(double x_l, double x_h,
+                  double y_l, double y_h,
+                  double z_l, double z_h,
+                  pcl::PointCloud<pcl::PointXYZ> &cloudMap)
+{
   int x_num, y_num, z_num;
   double resolution = _resolution / 2.0;
-  x_num = ceil((x_h - x_l)/resolution);
-  y_num = ceil((y_h - y_l)/resolution);
-  z_num = ceil((z_h - z_l)/resolution);
+  x_num = ceil((x_h - x_l) / resolution);
+  y_num = ceil((y_h - y_l) / resolution);
+  z_num = ceil((z_h - z_l) / resolution);
   pcl::PointXYZ pt;
-  for (int i=0; i<x_num; i++)
-    for (int j=0; j<y_num; j++)
-      for (int k=0; k<z_num; k++){
+  for (int i = 0; i < x_num; i++)
+    for (int j = 0; j < y_num; j++)
+      for (int k = 0; k < z_num; k++)
+      {
         pt.x = x_l + i * resolution;
         pt.y = y_l + j * resolution;
         pt.z = z_l + k * resolution;
@@ -71,14 +72,16 @@ void GenerateWall(double x_l, double x_h,
       }
 }
 
-void GenerateBox(Eigen::Vector3d pos, Eigen::Vector3d box_size, pcl::PointCloud<pcl::PointXYZ>& cloudMap){
-  GenerateWall(pos(0) - box_size(0) / 2, pos(0) + box_size(0) / 2, 
+void GenerateBox(Eigen::Vector3d pos, Eigen::Vector3d box_size, pcl::PointCloud<pcl::PointXYZ> &cloudMap)
+{
+  GenerateWall(pos(0) - box_size(0) / 2, pos(0) + box_size(0) / 2,
                pos(1) - box_size(1) / 2, pos(1) + box_size(1) / 2,
-               pos(2) - box_size(2) / 2, pos(2) + box_size(2) / 2, 
+               pos(2) - box_size(2) / 2, pos(2) + box_size(2) / 2,
                cloudMap);
 }
 
-void GenerateWall(Eigen::Vector3d pos, double theta, Eigen::Vector3d wall_size, pcl::PointCloud<pcl::PointXYZ>& cloudMap){
+void GenerateWall(Eigen::Vector3d pos, double theta, Eigen::Vector3d wall_size, pcl::PointCloud<pcl::PointXYZ> &cloudMap)
+{
   Eigen::Vector2d dirx(cos(theta), sin(theta));
   Eigen::Vector2d diry(cos(theta + M_PI_2), sin(theta + M_PI_2));
   double resolution = _resolution / 3.0;
@@ -88,13 +91,16 @@ void GenerateWall(Eigen::Vector3d pos, double theta, Eigen::Vector3d wall_size, 
   Eigen::Vector2d posx;
   Eigen::Vector2d posy;
   pcl::PointXYZ pt;
-  for (int i=0; i<x_num; i++){
+  for (int i = 0; i < x_num; i++)
+  {
     posx = pos.head(2) + (double)i * resolution * dirx;
     pt.x = posx(0);
-    for (int j=0; j<y_num; j++){
+    for (int j = 0; j < y_num; j++)
+    {
       posy = posx + (double)j * resolution * diry;
       pt.y = posy(1);
-      for (int k=0; k<z_num; k++){
+      for (int k = 0; k < z_num; k++)
+      {
         pt.z = pos(2) + (double)k * resolution;
         cloudMap.points.push_back(pt);
       }
@@ -102,7 +108,8 @@ void GenerateWall(Eigen::Vector3d pos, double theta, Eigen::Vector3d wall_size, 
   }
 }
 
-void GenerateBridge(){
+void GenerateBridge()
+{
   pcl::PointXYZ pt_random;
   vector<Eigen::Vector2d> obs_position, obs_size;
   double x, y;
@@ -131,19 +138,23 @@ void GenerateBridge(){
 
   std::vector<Eigen::Vector2d> bridge_pos_list;
   std::vector<Eigen::Vector3d> bridge_size_list;
-  for(int i = 0; i < bridge_num; ++i){
-    switch(i){
-      case 0 :{
-        bridge_pos << 0.0, 0.0;
-        bridge_size << 0.6, 1.5, 0.7;
-        break;
-      }
+  for (int i = 0; i < bridge_num; ++i)
+  {
+    switch (i)
+    {
+    case 0:
+    {
+      bridge_pos << 0.0, 0.0;
+      bridge_size << 0.6, 1.5, 0.7;
+      break;
+    }
     }
     bridge_pos_list.push_back(bridge_pos);
     bridge_size_list.push_back(bridge_size);
   }
 
-  for (int i = 0; i < bridge_num && ros::ok(); i++){
+  for (int i = 0; i < bridge_num && ros::ok(); i++)
+  {
     x = bridge_pos_list[i](0);
     y = bridge_pos_list[i](1);
     bridge_size = bridge_size_list[i];
@@ -154,12 +165,12 @@ void GenerateBridge(){
     y = floor(y / _resolution) * _resolution + _resolution / 2.0;
 
     auto pos = Eigen::Vector2d(x, y);
-      // board
+    // board
     GenerateWall(pos(0) - bridge_size(0) / 2.0, pos(0) + bridge_size(0) / 2.0,
-                pos(1) - bridge_size(1) / 2.0, pos(1) + bridge_size(1) / 2.0,
-                bridge_size(2), bridge_size(2) + 1e-3 + 2 * _resolution,
-                cloudMap);
-  // feet
+                 pos(1) - bridge_size(1) / 2.0, pos(1) + bridge_size(1) / 2.0,
+                 bridge_size(2), bridge_size(2) + 1e-3 + 2 * _resolution,
+                 cloudMap);
+    // feet
     std::vector<Eigen::Vector2d> corner_list;
     Eigen::Vector2d corner;
     corner << pos(0) - bridge_size(0) / 2, pos(1) - bridge_size(1) / 2;
@@ -171,12 +182,12 @@ void GenerateBridge(){
     corner << pos(0) + bridge_size(0) / 2, pos(1) + bridge_size(1) / 2;
     corner_list.push_back(corner);
 
-    GenerateWall(pos(0) - bridge_size(0) / 2, pos(0) + bridge_size(0) / 2, 
-                pos(1) - bridge_size(1) / 2, pos(1) - bridge_size(1) / 2 + 2 * _resolution,
-                0.0, bridge_size(2), cloudMap);
-    GenerateWall(pos(0) - bridge_size(0) / 2, pos(0) + bridge_size(0) / 2 , 
-                pos(1) + bridge_size(1) / 2 - 2 * _resolution, pos(1) + bridge_size(1) / 2,
-                0.0, bridge_size(2), cloudMap);
+    GenerateWall(pos(0) - bridge_size(0) / 2, pos(0) + bridge_size(0) / 2,
+                 pos(1) - bridge_size(1) / 2, pos(1) - bridge_size(1) / 2 + 2 * _resolution,
+                 0.0, bridge_size(2), cloudMap);
+    GenerateWall(pos(0) - bridge_size(0) / 2, pos(0) + bridge_size(0) / 2,
+                 pos(1) + bridge_size(1) / 2 - 2 * _resolution, pos(1) + bridge_size(1) / 2,
+                 0.0, bridge_size(2), cloudMap);
   }
 
   GenerateWall(_x_l, _x_h, _y_l, _y_l + _resolution, 0.0, 0.2, cloudMap);
@@ -193,14 +204,14 @@ void GenerateBridge(){
   cloudMap.height = 1;
   cloudMap.is_dense = true;
 
-
   kdtreeLocalMap.setInputCloud(cloudMap.makeShared());
   _map_ok = true;
   ROS_WARN("Finished generate Bridge Map ");
 }
 
-void GenerateCuboids(){
-    pcl::PointXYZ pt_random;
+void GenerateCuboids()
+{
+  pcl::PointXYZ pt_random;
   vector<Eigen::Vector2d> obs_position, obs_size;
   double x, y, z;
   Eigen::Vector3d bridge_size, box_size;
@@ -211,18 +222,20 @@ void GenerateCuboids(){
 
   std::vector<Eigen::Vector2d> bridge_pos_list;
   std::vector<Eigen::Vector3d> bridge_size_list;
-  for(int i = 0; i < bridge_num; ++i){
-    switch(i){
-      case 0 :{
-        bridge_pos << 4.7, 2.2;
-        bridge_size << 0.8, 1.8, 0.4;
-        break;
-      }
+  for (int i = 0; i < bridge_num; ++i)
+  {
+    switch (i)
+    {
+    case 0:
+    {
+      bridge_pos << 4.7, 2.2;
+      bridge_size << 0.8, 1.8, 0.4;
+      break;
+    }
     }
     bridge_pos_list.push_back(bridge_pos);
     bridge_size_list.push_back(bridge_size);
   }
-
 
   rand_x = uniform_real_distribution<double>(_x_l * 0.75, _x_h * 0.75);
   rand_y = uniform_real_distribution<double>(_y_l, _y_h);
@@ -231,7 +244,6 @@ void GenerateCuboids(){
   auto rand_float_x = uniform_real_distribution<double>(_x_l * 0.6, _x_h * 0.6);
   auto rand_float_y = uniform_real_distribution<double>(_y_l, _y_h);
   auto rand_float_z = uniform_real_distribution<double>(0.6, 1.1);
-
 
   rand_box_x_ = uniform_real_distribution<double>(0.1, 0.8);
   rand_box_y_ = uniform_real_distribution<double>(0.1, 0.8);
@@ -250,7 +262,8 @@ void GenerateCuboids(){
   // generate random box
   obs_position.clear();
   obs_size.clear();
-  for (int i = 0; i < _obs_num && ros::ok(); ++i){
+  for (int i = 0; i < _obs_num && ros::ok(); ++i)
+  {
     x = rand_x(eng);
     y = rand_y(eng);
     z = rand_z_(eng);
@@ -283,7 +296,8 @@ void GenerateCuboids(){
 
   obs_position.clear();
   obs_size.clear();
-  for (int i = 0; i < _float_obs_num && ros::ok(); ++i){
+  for (int i = 0; i < _float_obs_num && ros::ok(); ++i)
+  {
     x = rand_float_x(eng);
     y = rand_float_y(eng);
     z = rand_float_z(eng);
@@ -323,13 +337,13 @@ void GenerateCuboids(){
   cloudMap.height = 1;
   cloudMap.is_dense = true;
 
-
   kdtreeLocalMap.setInputCloud(cloudMap.makeShared());
   _map_ok = true;
   ROS_WARN("Finished generate Cuboids Map ");
 }
 
-void pubPoints(){
+void pubPoints()
+{
   while (ros::ok())
   {
     ros::spinOnce();
@@ -341,8 +355,39 @@ void pubPoints(){
   _all_map_pub.publish(globalMap_pcd);
 }
 
-int main(int argc, char **argv){
-  
+void GenerateTwoTablesMap()
+{
+  // Clear previous map
+  cloudMap.clear();
+
+  // Table 1
+  Eigen::Vector3d table1_center(2.0, 0.0, 0.4); // x, y, z (center)
+  Eigen::Vector3d table1_size(0.8, 1.2, 0.8);   // length, width, height
+  GenerateBox(table1_center, table1_size, cloudMap);
+
+  // Table 2
+  Eigen::Vector3d table2_center(0.0, -3.0, 0.4);
+  Eigen::Vector3d table2_size(1.2, 0.8, 0.8);
+  GenerateBox(table2_center, table2_size, cloudMap);
+
+  // Optionally, add ground and walls
+  GenerateWall(_x_l, _x_h, _y_l, _y_l + _resolution, 0.0, 0.2, cloudMap);
+  GenerateWall(_x_l, _x_h, _y_h - _resolution, _y_h, 0.0, 0.2, cloudMap);
+  GenerateWall(_x_l, _x_l + _resolution, _y_l, _y_h, 0.0, 0.2, cloudMap);
+  GenerateWall(_x_h - _resolution, _x_h, _y_l, _y_h, 0.0, 0.2, cloudMap);
+
+  cloudMap.width = cloudMap.points.size();
+  cloudMap.height = 1;
+  cloudMap.is_dense = true;
+
+  kdtreeLocalMap.setInputCloud(cloudMap.makeShared());
+  _map_ok = true;
+  ROS_WARN("Finished generate Two Tables Map");
+}
+
+int main(int argc, char **argv)
+{
+
   ros::init(argc, argv, "random_map_sensing");
   ros::NodeHandle n("~");
 
@@ -358,7 +403,10 @@ int main(int argc, char **argv){
 
   int seed = 0;
   n.param("map/seed", seed, 0);
-  if(seed == 0){seed = rd();} 
+  if (seed == 0)
+  {
+    seed = rd();
+  }
   eng.seed(seed);
 
   n.param("pub_rate", _pub_rate, 10.0);
@@ -371,18 +419,25 @@ int main(int argc, char **argv){
   _y_h = +_y_size / 2.0;
 
   _obs_num = min(_obs_num, (int)_x_size * 10);
-  
-  if(_map_type == 0){
+
+  if (_map_type == 0)
+  {
     GenerateCuboids();
-  }else if(_map_type == 1){
+  }
+  else if (_map_type == 1)
+  {
     GenerateBridge();
+  }
+  else if (_map_type == 42)
+  {
+    GenerateTwoTablesMap();
   }
 
   ros::Rate loop_rate(_pub_rate);
-  while (ros::ok()){
-    pubPoints();   
+  while (ros::ok())
+  {
+    pubPoints();
     ros::spinOnce();
     loop_rate.sleep();
   }
-
 }
