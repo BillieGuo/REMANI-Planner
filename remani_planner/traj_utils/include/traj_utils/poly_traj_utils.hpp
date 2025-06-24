@@ -30,6 +30,7 @@ namespace poly_traj
         int singul;
         double mobile_base_wheel_base = 0.370445;
         double mobile_base_wheel_radius = 0.07;
+
     public:
         Piece() = default;
 
@@ -79,7 +80,7 @@ namespace poly_traj
             Eigen::Vector2d vel = getVel(t).head(2);
             Eigen::Matrix2d rotation_matrix;
             rotation_matrix << vel(0), -vel(1),
-                               vel(1), vel(0);
+                vel(1), vel(0);
             rotation_matrix = singul * rotation_matrix / vel.norm();
 
             return rotation_matrix;
@@ -91,11 +92,11 @@ namespace poly_traj
             Eigen::Vector2d acc = getAcc(t).head(2);
             Eigen::Matrix2d temp_a_ba, temp_v_bv;
             temp_a_ba << acc(0), -acc(1),
-                         acc(1), acc(0);
+                acc(1), acc(0);
             temp_v_bv << vel(0), -vel(1),
-                         vel(1), vel(0);
-            Eigen::Matrix2d R_dot = singul * (temp_a_ba / vel.norm() - temp_v_bv / pow(vel.norm(), 3) * (vel.transpose() * acc)); 
-        
+                vel(1), vel(0);
+            Eigen::Matrix2d R_dot = singul * (temp_a_ba / vel.norm() - temp_v_bv / pow(vel.norm(), 3) * (vel.transpose() * acc));
+
             return R_dot;
         }
 
@@ -156,20 +157,24 @@ namespace poly_traj
             return std::atan2(singul * vel(1), singul * vel(0)); //[-PI, PI]
         }
 
-        inline double getCarVel(const double &t) const{
-            Eigen::Vector2d vel  = getVel(t).head(2);
+        inline double getCarVel(const double &t) const
+        {
+            Eigen::Vector2d vel = getVel(t).head(2);
             return singul * vel.norm();
         }
 
         inline double getCarAcc(const double &t) const
         {
-            Eigen::Vector2d vel  = getVel(t).head(2);
+            Eigen::Vector2d vel = getVel(t).head(2);
             Eigen::Vector2d acc = getAcc(t).head(2);
 
-            if (vel.norm() < 1e-6){
-              return 0.0;
-            }else{
-              return singul * (vel(0)*acc(0)+vel(1)*acc(1)) / vel.norm();
+            if (vel.norm() < 1e-6)
+            {
+                return 0.0;
+            }
+            else
+            {
+                return singul * (vel(0) * acc(0) + vel(1) * acc(1)) / vel.norm();
             }
         }
 
@@ -178,23 +183,29 @@ namespace poly_traj
             Eigen::Vector2d vel = getVel(t).head(2);
             Eigen::Vector2d acc = getAcc(t).head(2);
 
-            if (vel.norm() < 1e-6){
-              return 0.0;
-            }else{
-              return (vel(0) * acc(1) - vel(1) * acc(0)) / vel.squaredNorm();
+            if (vel.norm() < 1e-6)
+            {
+                return 0.0;
+            }
+            else
+            {
+                return (vel(0) * acc(1) - vel(1) * acc(0)) / vel.squaredNorm();
             }
         }
-        
+
         inline double getCarDomega(const double &t) const
         {
-            Eigen::Vector2d vel  = getVel(t).head(2);
+            Eigen::Vector2d vel = getVel(t).head(2);
             Eigen::Vector2d acc = getAcc(t).head(2);
             Eigen::Vector2d jer = getJer(t).head(2);
 
-            if (vel.norm() < 1e-6){
+            if (vel.norm() < 1e-6)
+            {
                 return 0.0;
-            }else{
-                double domega = (vel(0)*jer(1)-vel(1)*jer(0)) / vel.squaredNorm();
+            }
+            else
+            {
+                double domega = (vel(0) * jer(1) - vel(1) * jer(0)) / vel.squaredNorm();
                 domega -= 2 * (vel(0) * acc(1) - vel(1) * acc(0)) * (vel(0) * acc(0) + vel(1) * acc(1)) / vel.squaredNorm() / vel.squaredNorm();
                 return domega;
             }
@@ -202,13 +213,13 @@ namespace poly_traj
 
         inline double getCarLeftWheelOmega(const double &t) const
         {
-            Eigen::Vector2d vel  = getVel(t).head(2);
+            Eigen::Vector2d vel = getVel(t).head(2);
             Eigen::Vector2d acc = getAcc(t).head(2);
             double v_norm = vel.norm();
             double vTv_inv = 1.0 / vel.squaredNorm(); // avoid siguality vel = 0
             Eigen::Matrix2d B_h;
             B_h << 0.0, -1.0,
-                    1.0,  0.0;
+                1.0, 0.0;
             double aTBv = acc.transpose() * B_h * vel;
             double omega = aTBv * vTv_inv;
             double wheel_omega_left = (2.0 * singul * v_norm - mobile_base_wheel_base * omega) / (2 * mobile_base_wheel_radius);
@@ -218,20 +229,20 @@ namespace poly_traj
 
         inline double getCarRightWheelOmega(const double &t) const
         {
-            Eigen::Vector2d vel  = getVel(t).head(2);
+            Eigen::Vector2d vel = getVel(t).head(2);
             Eigen::Vector2d acc = getAcc(t).head(2);
             double v_norm = vel.norm();
             double vTv_inv = 1.0 / vel.squaredNorm(); // avoid siguality vel = 0
             Eigen::Matrix2d B_h;
             B_h << 0.0, -1.0,
-                    1.0,  0.0;
+                1.0, 0.0;
             double aTBv = acc.transpose() * B_h * vel;
             double omega = aTBv * vTv_inv;
             double wheel_omega_right = (2.0 * singul * v_norm + mobile_base_wheel_base * omega) / (2 * mobile_base_wheel_radius);
 
             return wheel_omega_right;
         }
-        
+
         inline double getCarLeftWheelAlpha(const double &t) const
         {
             Eigen::Vector2d vel = getVel(t).head(2);
@@ -242,7 +253,7 @@ namespace poly_traj
             double vTv_inv2 = vTv_inv * vTv_inv;
             Eigen::Matrix2d B_h;
             B_h << 0.0, -1.0,
-                    1.0,  0.0;
+                1.0, 0.0;
             double aTv = acc.transpose() * vel;
             double aTBv = acc.transpose() * B_h * vel;
             double jTBv = jer.transpose() * B_h * vel;
@@ -261,7 +272,7 @@ namespace poly_traj
             double vTv_inv2 = vTv_inv * vTv_inv;
             Eigen::Matrix2d B_h;
             B_h << 0.0, -1.0,
-                    1.0,  0.0;
+                1.0, 0.0;
             double aTv = acc.transpose() * vel;
             double aTBv = acc.transpose() * B_h * vel;
             double jTBv = jer.transpose() * B_h * vel;
@@ -275,29 +286,30 @@ namespace poly_traj
             Eigen::Vector2d vel = getVel(t).head(2);
             Eigen::Vector2d acc = getAcc(t).head(2);
             Eigen::Vector2d jer = getJer(t).head(2);
-           
-            //state: angle, vel, acc, omega, domega
+
+            // state: angle, vel, acc, omega, domega
             Eigen::VectorXd CarState(5);
 
-
             // theta angle
-            CarState[0] =  std::atan2(singul * vel(1), singul * vel(0));
+            CarState[0] = std::atan2(singul * vel(1), singul * vel(0));
             // vel
             CarState[1] = singul * vel.norm();
 
-
-            if(abs(CarState[1]) < 1e-6){
+            if (abs(CarState[1]) < 1e-6)
+            {
                 CarState[2] = 0.0;
                 CarState[3] = 0.0;
                 CarState[4] = 0.0;
-            }else{
-                // acc 
-                CarState[2] =  singul * (vel(0) * acc(0) + vel(1) * acc(1)) / CarState[1];
+            }
+            else
+            {
+                // acc
+                CarState[2] = singul * (vel(0) * acc(0) + vel(1) * acc(1)) / CarState[1];
                 // omega
-                CarState[3] =  (vel(0) * acc(1) - vel(1) * acc(0)) / std::pow(CarState[1], 2);
+                CarState[3] = (vel(0) * acc(1) - vel(1) * acc(0)) / std::pow(CarState[1], 2);
                 // domega
-                CarState[4] =  (vel(0)*jer(1)-vel(1)*jer(0)) / vel.squaredNorm();
-                CarState[4] -= 2 * (vel(0)*acc(1)-vel(1)*acc(0)) * (vel(0)*acc(0)+vel(1)*acc(1)) / vel.squaredNorm() / vel.squaredNorm();
+                CarState[4] = (vel(0) * jer(1) - vel(1) * jer(0)) / vel.squaredNorm();
+                CarState[4] -= 2 * (vel(0) * acc(1) - vel(1) * acc(0)) * (vel(0) * acc(0) + vel(1) * acc(1)) / vel.squaredNorm() / vel.squaredNorm();
             }
             // std::cout << "singul is: "<<  singul << std::endl;
             // std::cout << "vel is: "<<  vel << std::endl;
@@ -377,14 +389,14 @@ namespace poly_traj
                     r = 0.5 * (r + 1.0);
                 }
                 std::set<double> candidates = RootFinder::solvePolynomial(coeff.head(N - 1), l, r,
-                                                                        FLT_EPSILON / duration);
+                                                                          FLT_EPSILON / duration);
                 candidates.insert(0.0);
                 candidates.insert(1.0);
                 double maxVelRateSqr = -INFINITY;
                 double tempNormSqr;
                 for (std::set<double>::const_iterator it = candidates.begin();
-                    it != candidates.end();
-                    it++)
+                     it != candidates.end();
+                     it++)
                 {
                     if (0.0 <= *it && 1.0 >= *it)
                     {
@@ -426,14 +438,14 @@ namespace poly_traj
                     r = 0.5 * (r + 1.0);
                 }
                 std::set<double> candidates = RootFinder::solvePolynomial(coeff.head(N - 1), l, r,
-                                                                        FLT_EPSILON / duration);
+                                                                          FLT_EPSILON / duration);
                 candidates.insert(0.0);
                 candidates.insert(1.0);
                 double maxAccRateSqr = -INFINITY;
                 double tempNormSqr;
                 for (std::set<double>::const_iterator it = candidates.begin();
-                    it != candidates.end();
-                    it++)
+                     it != candidates.end();
+                     it++)
                 {
                     if (0.0 <= *it && 1.0 >= *it)
                     {
@@ -494,12 +506,13 @@ namespace poly_traj
     private:
         typedef std::vector<Piece<degree>> Pieces;
         Pieces pieces;
+
     public:
         Trajectory() = default;
 
         Trajectory(const std::vector<double> &durs,
-                const std::vector<typename Piece<degree>::CoefficientMat> &cMats, 
-                int s)
+                   const std::vector<typename Piece<degree>::CoefficientMat> &cMats,
+                   int s)
         {
             int N = std::min(durs.size(), cMats.size());
             pieces.reserve(N);
@@ -512,19 +525,19 @@ namespace poly_traj
         inline void GetState(double t, remani_planner::MMState &mm_state) const
         {
             double inner_t = t;
-            if(inner_t > getTotalDuration())
-                inner_t =getTotalDuration();
+            if (inner_t > getTotalDuration())
+                inner_t = getTotalDuration();
             int pieceIdx = locatePieceIdx(inner_t);
-                       
+
             mm_state.car_pos = pieces[pieceIdx].getPos(inner_t).head(2);
             mm_state.car_vel = pieces[pieceIdx].getVel(inner_t).head(2);
             Eigen::VectorXd car_state = pieces[pieceIdx].getCarStateExpPos(inner_t);
-            
+
             // angle, vel, acc, omega, domega
-            mm_state.car_yaw    = car_state(0);  // heading angle
-            mm_state.car_v      = car_state(1);
-            mm_state.car_a      = car_state(2);
-            mm_state.car_omega  = car_state(3);
+            mm_state.car_yaw = car_state(0); // heading angle
+            mm_state.car_v = car_state(1);
+            mm_state.car_a = car_state(2);
+            mm_state.car_omega = car_state(3);
             mm_state.car_domega = car_state(4);
 
             int traj_dim = getPieceDim();
@@ -626,8 +639,8 @@ namespace poly_traj
         }
 
         inline void emplace_back(const double &dur,
-                                const typename Piece<degree>::CoefficientMat &cMat,
-                                int s)
+                                 const typename Piece<degree>::CoefficientMat &cMat,
+                                 int s)
         {
             pieces.emplace_back(dur, cMat, s);
             return;
@@ -645,9 +658,9 @@ namespace poly_traj
             int idx;
             double dur;
             for (idx = 0;
-                idx < N &&
-                t > (dur = pieces[idx].getDuration());
-                idx++)
+                 idx < N &&
+                 t > (dur = pieces[idx].getDuration());
+                 idx++)
             {
                 t -= dur;
             }
@@ -873,7 +886,7 @@ namespace poly_traj
             }
             return feasible;
         }
-        
+
         inline Piece<degree> getPiece(int i) const
         {
             return pieces[i];
@@ -1042,7 +1055,7 @@ namespace poly_traj
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     };
 
-    template<int traj_dim_>
+    template <int traj_dim_>
     class MinSnapOpt
     {
     public:
@@ -1077,15 +1090,15 @@ namespace poly_traj
             for (int i = 0; i < N; i++)
             {
                 gdT(i) += 576.0 * b.row(8 * i + 4).squaredNorm() +
-                         5760.0 * b.row(8 * i + 4).dot(b.row(8 * i + 5)) * T1(i) +
-                         14400.0 * b.row(8 * i + 5).squaredNorm() * T2(i) +
-                         17280.0 * b.row(8 * i + 4).dot(b.row(8 * i + 6)) * T2(i) +
-                         86400.0 * b.row(8 * i + 5).dot(b.row(8 * i + 6)) * T3(i) +
-                         40320.0 * b.row(8 * i + 4).dot(b.row(8 * i + 7)) * T3(i) +
-                         129600.0 * b.row(8 * i + 6).squaredNorm() * T4(i) +
-                         201600.0 * b.row(8 * i + 5).dot(b.row(8 * i + 7)) * T4(i) +
-                         604800.0 * b.row(8 * i + 6).dot(b.row(8 * i + 7)) * T5(i) +
-                         705600.0 * b.row(8 * i + 7).squaredNorm() * T6(i);
+                          5760.0 * b.row(8 * i + 4).dot(b.row(8 * i + 5)) * T1(i) +
+                          14400.0 * b.row(8 * i + 5).squaredNorm() * T2(i) +
+                          17280.0 * b.row(8 * i + 4).dot(b.row(8 * i + 6)) * T2(i) +
+                          86400.0 * b.row(8 * i + 5).dot(b.row(8 * i + 6)) * T3(i) +
+                          40320.0 * b.row(8 * i + 4).dot(b.row(8 * i + 7)) * T3(i) +
+                          129600.0 * b.row(8 * i + 6).squaredNorm() * T4(i) +
+                          201600.0 * b.row(8 * i + 5).dot(b.row(8 * i + 7)) * T4(i) +
+                          604800.0 * b.row(8 * i + 6).dot(b.row(8 * i + 7)) * T5(i) +
+                          705600.0 * b.row(8 * i + 7).squaredNorm() * T6(i);
             }
             return;
         }
@@ -1096,21 +1109,21 @@ namespace poly_traj
             for (int i = 0; i < N; i++)
             {
                 gdC.row(8 * i + 7) += 10080.0 * b.row(8 * i + 4) * T4(i) +
-                                     40320.0 * b.row(8 * i + 5) * T5(i) +
-                                     100800.0 * b.row(8 * i + 6) * T6(i) +
-                                     201600.0 * b.row(8 * i + 7) * T7(i);
+                                      40320.0 * b.row(8 * i + 5) * T5(i) +
+                                      100800.0 * b.row(8 * i + 6) * T6(i) +
+                                      201600.0 * b.row(8 * i + 7) * T7(i);
                 gdC.row(8 * i + 6) += 5760.0 * b.row(8 * i + 4) * T3(i) +
-                                     21600.0 * b.row(8 * i + 5) * T4(i) +
-                                     51840.0 * b.row(8 * i + 6) * T5(i) +
-                                     100800.0 * b.row(8 * i + 7) * T6(i);
+                                      21600.0 * b.row(8 * i + 5) * T4(i) +
+                                      51840.0 * b.row(8 * i + 6) * T5(i) +
+                                      100800.0 * b.row(8 * i + 7) * T6(i);
                 gdC.row(8 * i + 5) += 2880.0 * b.row(8 * i + 4) * T2(i) +
-                                     9600.0 * b.row(8 * i + 5) * T3(i) +
-                                     21600.0 * b.row(8 * i + 6) * T4(i) +
-                                     40320.0 * b.row(8 * i + 7) * T5(i);
+                                      9600.0 * b.row(8 * i + 5) * T3(i) +
+                                      21600.0 * b.row(8 * i + 6) * T4(i) +
+                                      40320.0 * b.row(8 * i + 7) * T5(i);
                 gdC.row(8 * i + 4) += 1152.0 * b.row(8 * i + 4) * T1(i) +
-                                     2880.0 * b.row(8 * i + 5) * T2(i) +
-                                     5760.0 * b.row(8 * i + 6) * T3(i) +
-                                     10080.0 * b.row(8 * i + 7) * T4(i);
+                                      2880.0 * b.row(8 * i + 5) * T2(i) +
+                                      5760.0 * b.row(8 * i + 6) * T3(i) +
+                                      10080.0 * b.row(8 * i + 7) * T4(i);
                 // gdC.block<4, 3>(8 * i, 0).setZero();
             }
             return;
@@ -1214,7 +1227,7 @@ namespace poly_traj
         {
             for (int i = 0; i < N - 1; i++)
             {
-                gdInP.col(i) = adjGdC.row(8 * i + 7).transpose(); 
+                gdInP.col(i) = adjGdC.row(8 * i + 7).transpose();
             }
             gdHead = (adjGdC.topRows(4).transpose());
             gdTail = (adjGdC.bottomRows(4).transpose());
@@ -1222,7 +1235,6 @@ namespace poly_traj
             // gdTail = (adjGdC.bottomRows(4).transpose()).topRows(2);
             return;
         }
-
 
     public:
         inline void reset(const int &pieceNum)
@@ -1243,9 +1255,9 @@ namespace poly_traj
         }
 
         inline void generate(const Eigen::MatrixXd &inPs,
-                            const Eigen::VectorXd &ts,
-                            const Eigen::MatrixXd &headState,
-                            const Eigen::MatrixXd &tailState)
+                             const Eigen::VectorXd &ts,
+                             const Eigen::MatrixXd &headState,
+                             const Eigen::MatrixXd &tailState)
         {
             headPVAJ = headState;
             tailPVAJ = tailState;
@@ -1360,7 +1372,7 @@ namespace poly_traj
 
             A.factorizeLU();
             A.solve(b);
-            
+
             return;
         }
 
@@ -1500,7 +1512,7 @@ namespace poly_traj
 
             A.factorizeLU();
             A.solve(b);
-            
+
             return;
         }
 
@@ -1621,8 +1633,8 @@ namespace poly_traj
 
         template <typename EIGENVEC, typename EIGENMAT>
         inline void getGrad2TP(EIGENVEC &gdT,
-                               EIGENMAT &gdInPs, 
-                               Eigen::MatrixXd &gdHead, 
+                               EIGENMAT &gdInPs,
+                               Eigen::MatrixXd &gdHead,
                                Eigen::MatrixXd &gdTail)
         {
             solveAdjGradC(gdC);
@@ -1646,4 +1658,4 @@ namespace poly_traj
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     };
 
-} //namespace poly_traj
+} // namespace poly_traj
