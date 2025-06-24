@@ -17,15 +17,15 @@ mm:
   base_mani_fixed_joint_xyz_ypr: [0.0, 0.0, 0.0, 0.03, -0.02, 0.23] # the position and orientation of the manipulator relative to the base
 
   # param for FastArmer
-  use_fast_armer       : true # whether to use FastArmer or UR5
-  manipulator_thickness: 0.03 # radius of the circle used to check the collision of the manipulator for FastArmer
-  manipulator_config   : [0.176,   0.417,  0.07,   0.385,  0.0,    0.20] # parameters for DH table for FastArmer
-  manipulator_min_pos  : [-3.062, -3.136, -0.008, -2.932, -3.655, -3.14] # minimum joint position for FastArmer
-  manipulator_max_pos  : [ 3.052,  0.001,  3.044,  2.950,  0.447,  3.14] # maximum joint position for FastArmer
+  # use_fast_armer       : true # whether to use FastArmer or UR5
+  # manipulator_thickness: 0.03 # radius of the circle used to check the collision of the manipulator for FastArmer
+  # manipulator_config   : [0.176,   0.417,  0.07,   0.385,  0.0,    0.20] # parameters for DH table for FastArmer
+  # manipulator_min_pos  : [-3.062, -3.136, -0.008, -2.932, -3.655, -3.14] # minimum joint position for FastArmer
+  # manipulator_max_pos  : [ 3.052,  0.001,  3.044,  2.950,  0.447,  3.14] # maximum joint position for FastArmer
 
   # param for UR5
-  # use_fast_armer       : false # whether to use FastArmer or UR5
-  # manipulator_thickness: 0.044 # radius of the circle used to check the collision of the manipulator for UR5
-  # manipulator_config   : [0.163,  0.425, 0.392, 0.127, 0.1,   0.1] # parameters for DH table for UR5
-  # manipulator_min_pos  : [-3.14, -3.14, -3.14, -3.14, -3.14, -3.14] # minimum joint position for UR5
-  # manipulator_max_pos  : [ 3.14,  3.14,  3.14,  3.14,  3.14,  3.14] # maximum joint position for UR5
+  use_fast_armer       : false # whether to use FastArmer or UR5
+  manipulator_thickness: 0.044 # radius of the circle used to check the collision of the manipulator for UR5
+  manipulator_config   : [0.163,  0.425, 0.392, 0.127, 0.1,   0.1] # parameters for DH table for UR5
+  manipulator_min_pos  : [-3.14, -3.14, -3.14, -3.14, -3.14, -3.14] # minimum joint position for UR5
+  manipulator_max_pos  : [ 3.14,  3.14,  3.14,  3.14,  3.14,  3.14] # maximum joint position for UR5
